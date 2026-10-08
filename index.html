@@ -213,6 +213,16 @@ async function playTrack(trackId) {
   if (!resp.ok) throw new Error("Wiedergabe fehlgeschlagen (" + resp.status + ")");
 }
 
+// ---------- Login einleiten (Track vorher sichern) ----------
+function startLogin() {
+  connectBtn.style.display = "none";
+  // Track merken: Spotify leitet OHNE Query-Parameter zurück
+  sessionStorage.setItem("hitster_track", currentTrack);
+  state = randomString(12);
+  sessionStorage.setItem("hitster_state", state);
+  buildChallenge().then(v => { verifier = v.verifier; challenge = v.challenge; redirectToSpotify(); });
+}
+
 // ---------- Hauptablauf ----------
 async function startPlayback() {
   try {
@@ -228,12 +238,13 @@ async function startPlayback() {
 }
 
 async function main() {
-  if (!TRACK_PARAM) {
+  // Nach Login-Roundtrip ist die URL ohne ?track= → aus der Session wiederherstellen
+  currentTrack = TRACK_PARAM || sessionStorage.getItem("hitster_track") || "";
+  if (!currentTrack) {
     showStatus("Kein Song übertragen");
     showHint("Scanne einen Hitster-QR-Code, um einen Song zu spielen.");
     return;
   }
-  currentTrack = TRACK_PARAM;
 
   // Rückkehr von Spotify (Code in der URL)?
   const params = new URLSearchParams(location.search);
@@ -259,12 +270,7 @@ async function main() {
       showStatus("Mit Spotify verbinden");
       showHint("Einmal anmelden – danach läuft der Song versteckt über dein eigenes Konto.");
       connectBtn.style.display = "inline-block";
-      connectBtn.onclick = () => {
-        connectBtn.style.display = "none";
-        state = randomString(12);
-        sessionStorage.setItem("hitster_state", state);
-        buildChallenge().then(v => { verifier = v.verifier; challenge = v.challenge; redirectToSpotify(); });
-      };
+      connectBtn.onclick = startLogin;
       return;
     }
 
@@ -285,12 +291,7 @@ async function main() {
       showHint(err.message);
     }
     connectBtn.style.display = "inline-block";
-    connectBtn.onclick = () => {
-      connectBtn.style.display = "none";
-      state = randomString(12);
-      sessionStorage.setItem("hitster_state", state);
-      buildChallenge().then(v => { verifier = v.verifier; challenge = v.challenge; redirectToSpotify(); });
-    };
+    connectBtn.onclick = startLogin;
   }
 }
 
