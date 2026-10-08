@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hitster – Nächsten Song scannen</title>
+<style>
+  :root { --bg: #151515; --accent: #1db954; --fg: #eee; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center; min-height: 100vh;
+  }
+
+  #screen { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 24px; width: 100%; max-width: 520px; }
+
+  h1 { font-size: 22px; }
+  .hint { font-size: 14px; opacity: .6; max-width: 320px; line-height: 1.5; }
+
+  #reader {
+    width: 100%; max-width: 360px; border-radius: 16px; overflow: hidden;
+    background: #000; border: 1px solid rgba(255,255,255,.15);
+  }
+  #reader video { border-radius: 16px; display: block; }
+  #reader img { border-radius: 16px; display: block; }
+
+  .status { font-size: 16px; min-height: 24px; opacity: .9; }
+
+  button {
+    background: var(--accent); color: #fff; border: none; cursor: pointer;
+    font-size: 16px; font-weight: 600; padding: 13px 30px; border-radius: 999px;
+    transition: filter .15s;
+  }
+  button:hover { filter: brightness(1.1); }
+  button.secondary {
+    background: transparent; color: var(--fg);
+    border: 1px solid rgba(255,255,255,.4);
+  }
+  button.secondary:hover { filter: brightness(1.3); }
+</style>
+</head>
+<body>
+  <div id="screen">
+    <h1>Nächsten Song scannen</h1>
+    <div class="hint">Halte die QR-Karte vor die Kamera. Sobald der Song erkannt wird, startet die Wiedergabe automatisch.</div>
+    <div id="reader"></div>
+    <div class="status" id="status">Kamera wird gestartet…</div>
+    <button id="cancelBtn" class="secondary">Abbrechen</button>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+const statusEl = document.getElementById("status");
+const cancelBtn = document.getElementById("cancelBtn");
+const reading = new Html5Qrcode("reader", { verbose: false });
+
+let stopped = false;
+
+function showStatus(msg) { statusEl.textContent = msg; }
+
+async function startScanner() {
+  try {
+    await reading.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 220, height: 220 } },
+      onScanSuccess,
+      () => {}  // Fehler pro Frame ignorieren (z. B. kein Code sichtbar)
+    );
+    showStatus("Kamera läuft – QR-Karte zeigen");
+  } catch (err) {
+    console.error(err);
+    showStatus("Kamera konnte nicht gestartet werden");
+    statusEl.insertAdjacentHTML("afterend",
+      '<div class="hint">Bitte erlaube die Kamera-Berechtigung in den Browser-Einstellungen.</div>');
+    cancelBtn.style.display = "inline-block";
+  }
+}
+
+function onScanSuccess(decodedText) {
+  if (stopped) return;
+  // QR enthält z. B.: https://lukeoptics.github.io/hitstar/?track=abc123
+  const m = /[?&]track=([A-Za-z0-9]+)/.exec(decodedText);
+  if (!m) {
+    showStatus("Kein Hitster-Code erkannt – andere Karte versuchen");
+    return;
+  }
+  stopped = true;
+  showStatus("Song erkannt – wird gestartet…");
+  reading.stop().then(() => reading.clear()).catch(() => {});
+  location.href = "index.html?track=" + m[1];
+}
+
+cancelBtn.onclick = () => {
+  stopped = true;
+  reading.stop().then(() => reading.clear()).catch(() => {});
+  location.href = "index.html";
+};
+
+startScanner();
+</script>
+</body>
+</html>
