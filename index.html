@@ -58,6 +58,11 @@
     transition: filter .15s;
   }
   button:hover { filter: brightness(1.1); }
+  button.secondary {
+    background: transparent; color: var(--fg);
+    border: 1px solid rgba(255,255,255,.4);
+  }
+  button.secondary:hover { filter: brightness(1.3); }
 
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
@@ -71,6 +76,7 @@
     <div class="status" id="status">Vorbereitung…</div>
     <div class="hint" id="hint"></div>
     <button id="connectBtn" style="display:none">Mit Spotify verbinden</button>
+    <button id="nextBtn" class="secondary" style="display:none">Nächster Song scannen</button>
   </div>
 
 <script>
@@ -92,6 +98,7 @@ const statusEl = document.getElementById("status");
 const hintEl = document.getElementById("hint");
 const vinyl = document.getElementById("vinyl");
 const connectBtn = document.getElementById("connectBtn");
+const nextBtn = document.getElementById("nextBtn");
 
 screen.style.display = "flex";
 
@@ -230,6 +237,8 @@ async function startPlayback() {
     showHint("Der Song wird auf deinem Gerät abgespielt.");
     await playTrack(currentTrack);
     showStatus("Jetzt läuft’s!");
+    connectBtn.style.display = "none";
+    nextBtn.style.display = "inline-block";
   } catch (err) {
     vinyl.classList.add("paused");
     showStatus("Fehler");
@@ -304,6 +313,11 @@ async function main() {
 let state = null;
 let verifier = null;
 let challenge = null;
+
+// "Nächster Song": zum QR-Scanner wechseln
+nextBtn.onclick = () => {
+  location.href = "scan.html";
+};
 
 main();
 </script>
