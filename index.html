@@ -75,6 +75,7 @@
     </div>
     <div class="status" id="status">Vorbereitung…</div>
     <div class="hint" id="hint"></div>
+    <button id="pauseBtn" style="display:none">Pause</button>
     <button id="connectBtn" style="display:none">Mit Spotify verbinden</button>
     <button id="nextBtn" class="secondary" style="display:none">Nächster Song scannen</button>
   </div>
@@ -99,6 +100,7 @@ const hintEl = document.getElementById("hint");
 const vinyl = document.getElementById("vinyl");
 const connectBtn = document.getElementById("connectBtn");
 const nextBtn = document.getElementById("nextBtn");
+const pauseBtn = document.getElementById("pauseBtn");
 
 screen.style.display = "flex";
 
@@ -194,6 +196,17 @@ async function initPlayer() {
       reject(new Error("Nur mit Spotify Premium möglich!")));
     p.addListener("playback_error", ({ message }) =>
       reject(new Error(message || "Wiedergabe-Fehler")));
+    // Button-Beschriftung an den echten Wiedergabe-Zustand anpassen
+    p.addListener("player_state_changed", state => {
+      if (!state) return;
+      if (state.paused) {
+        vinyl.classList.add("paused");
+        pauseBtn.textContent = "Start";
+      } else {
+        vinyl.classList.remove("paused");
+        pauseBtn.textContent = "Stopp";
+      }
+    });
     p.connect().catch(reject);
     window.__player = p;
   });
@@ -238,6 +251,7 @@ async function startPlayback() {
     await playTrack(currentTrack);
     showStatus("Jetzt läuft’s!");
     connectBtn.style.display = "none";
+    pauseBtn.style.display = "inline-block";
     nextBtn.style.display = "inline-block";
   } catch (err) {
     vinyl.classList.add("paused");
@@ -317,6 +331,24 @@ let challenge = null;
 // "Nächster Song": zum QR-Scanner wechseln
 nextBtn.onclick = () => {
   location.href = "scan.html";
+};
+
+// "Stopp"/"Start": Wiedergabe pausieren bzw. fortsetzen
+pauseBtn.onclick = async () => {
+  if (!player) return;
+  try {
+    const state = await player.getCurrentState();
+    if (state && state.paused) {
+      await player.resume();
+      showStatus("Jetzt läuft’s!");
+    } else {
+      await player.pause();
+      showStatus("Pausiert");
+    }
+  } catch (err) {
+    console.error(err);
+    showHint(err.message);
+  }
 };
 
 main();
